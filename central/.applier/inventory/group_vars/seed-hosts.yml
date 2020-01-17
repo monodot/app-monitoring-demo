@@ -1,0 +1,46 @@
+namespace: "tad-monitoring"
+namespace_desc: "Tom's Monitoring Namespace"
+
+prometheus_vars_deploy_dev:
+  PROM_AUTH: "admin:{SHA}+GW1NiOxIf007lQmx5Llwzr4wic="  # add Basic Auth credentials for Prometheus
+  APPS_NAMESPACE: "{{ namespace }}"
+  IMAGE_PROMETHEUS: registry.redhat.io/openshift3/prometheus:v3.11
+  IMAGE_PROXY: registry.redhat.io/openshift3/oauth-proxy:v3.11
+  IMAGE_ALERTMANAGER: registry.redhat.io/openshift3/prometheus-alertmanager:v3.11
+  IMAGE_ALERT_BUFFER: registry.redhat.io/openshift3/prometheus-alert-buffer:v3.11
+
+grafana_vars_deploy_dev:
+  PROMETHEUS_URL: https://prometheus
+  PROMETHEUS_USERNAME: admin
+  PROMETHEUS_PASSWORD: admin123
+  IMAGE_PROXY: registry.redhat.io/openshift3/oauth-proxy:v3.11
+  # IMAGE_GRAFANA: registry.redhat.io/openshift3/grafana:v3.11
+
+openshift_cluster_content:
+- object: Projects
+  content:
+  - name: Monitoring Project
+    template: "{{ inventory_dir }}/templates/project-template.yml"
+    action: create
+    params_from_vars:
+      NAMESPACE: "{{ namespace }}"
+      NAMESPACE_DISPLAY_NAME: "{{ namespace_desc }}"
+    tags:
+    - projects
+
+- object: Deployments
+  content:
+  - name: Prometheus
+    template: "{{ inventory_dir }}/templates/prometheus.yml"
+    params_from_vars: "{{ prometheus_vars_deploy_dev }}"
+    namespace: "{{ namespace }}"
+    tags:
+    - dev
+    - prometheus
+  - name: Grafana
+    template: "{{ inventory_dir }}/templates/grafana.yml"
+    params_from_vars: "{{ grafana_vars_deploy_dev }}"
+    namespace: "{{ namespace }}"
+    tags:
+    - dev
+    - grafana

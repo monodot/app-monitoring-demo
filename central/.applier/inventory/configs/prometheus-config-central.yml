@@ -1,0 +1,47 @@
+rule_files:
+  - '*.rules'
+global:
+  scrape_interval:     15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
+  evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
+  # scrape_timeout is set to the global default (10s).
+
+# A scrape configuration containing exactly one endpoint to scrape:
+# Here it's Prometheus itself.
+scrape_configs:
+  # The job name is added as a label `job=` to any timeseries scraped from this config.
+  - job_name: 'prometheus'
+
+    # metrics_path defaults to '/metrics'
+    # scheme defaults to 'http'.
+
+    static_configs:
+    - targets: ['localhost:9090']
+
+  # Use Prometheus Federation to grab basic Artemis metrics from 'remote' Prometheuses
+  - job_name: 'remote-federation-artemis'
+    scrape_interval: 15s  # This could be set to something like 30m if desired
+    honor_labels: true
+    metrics_path: '/federate'
+    basic_auth:
+      username: admin
+      password: admin123
+    tls_config:
+      insecure_skip_verify: true
+    scheme: https
+    params:
+      'match[]':
+        # Only fetch the message count from the Artemis logistics.out queue
+        # - 'artemis_message_count{address="logistics.out"}'
+        - 'artemis_message_count'
+    static_configs:
+      - targets:
+        - 'prom-tad-remote.apps.na311.openshift.opentlc.com:443'   # the service protected by oauth-proxy, exposed as a Route
+
+    # TODO update this to use kubernetes_sd_configs and 'service' role, to discover all remote endpoints.
+
+alerting:
+  alertmanagers:
+  - scheme: http
+    static_configs:
+    - targets:
+      - "localhost:9093"
